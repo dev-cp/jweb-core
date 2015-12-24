@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd   
+    http://www.springframework.org/schema/util 
+    http://www.springframework.org/schema/util/spring-util-3.0.xsd
+    http://www.springframework.org/schema/aop
+    http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+    http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+    
+	<description>Shiro 配置</description>
+	  
+
+	
+<!-- 	<context:property-placeholder location="classpath:sysConfig.properties" /> -->
+	
+<!-- =================================   shiro启动相关  =================================== -->
+	<!-- 该bean工厂不仅是spring规范的bean工厂，而且还是bean处理器规范的bean处理器，能够在bean生命周期上进行代理工作，从而实现调用shiro过滤器的功能，完成每个http session 到shiro session包装的工作-->
+	<bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+		<property name="securityManager" ref="securityManager" />
+		<property name="loginUrl" value="/member/login.html" />
+		<property name="successUrl" value="/authentic/loginSuccessful.do" />
+		<property name="unauthorizedUrl" value="/error/noperms.jsp" />
+<!-- 		/shiro_cas.do*=cas -->
+<!-- /member/login.do*=authc -->
+<!-- /error/noperms.jsp*= anon -->
+<!-- /rest/*=noSessionCreation -->
+		<property name="filterChainDefinitions">
+			<value>
+				/webpage/authen*=anon
+				/room/speekable*=authc
+			</value>
+		</property>
+		<property name="filters"> 
+	      <util:map> 
+	         <entry key="casLogin" value-ref="casLoginFilter"/> 
+	         <entry key="casLogout" value-ref="casLogoutFilter"/> 
+	      </util:map> 
+	   </property> 
+	</bean>
+
+     <!-- 相当于调用SecurityUtils.setSecurityManager(securityManager)  -->
+   
+
+<!-- ==========================================  shiro核心组件相关   ======================================================= -->
+	<bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+		<!--设置自定义realm -->
+<!-- 		<property name="realm" ref="memberAccountNameRealm" /> -->
+		<property name="realm" ref="monitorRealm" />
+		<property name="sessionManager" ref="sessionManager"></property>
+		<property name="subjectFactory" ref="casSubjectFactory"></property>
+<!-- 		<property name="cacheManager" ref="shiroCacheManager"></property> -->
+	</bean>
+
+
+
+	
+<!-- ==============================================会话管理器相关  sessionManager 配置  ======================================= -->
+	<bean id="sessionManager" class="org.apache.shiro.web.session.mgt.DefaultWebSessionManager">
+		<property name="sessionDAO" ref="sessionDAO"></property>
+		<property name="sessionValidationScheduler" ref="sessionValidationScheduler"></property>
+		<property name="globalSessionTimeout" value="1800000"></property>
+		
+		<!-- 注册sessionListener到sessionManager中 -->
+		<property name="sessionListeners">
+			<list>
+				<ref local="mySessionListener"/>
+			</list>
+		</property>
+	</bean>
+
+
+
+	
+<!-- ==================================================session DAO相关  为了支持缓存session,现配置sessionDAO  ============================================= -->
+	<bean id="sessionDAO" class="org.apache.shiro.session.mgt.eis.EnterpriseCacheSessionDAO">
+		<!-- 默认的activeSessionsCacheName是shiro-activeSessionCache，如果要自定义，则名字应该和ehcache.xml中cache的name保存一致 -->
+
+		<!-- 使用自定义的memcached -->
+<!-- 		<property name="cacheManager" ref="memcachedCacheManager"></property> -->
+<!-- 		<property name="activeSessionsCacheName" value="mclient0"></property> -->
+
+		<!-- 使用ehcache -->
+		<property name="cacheManager" ref="ehcacheCacheManager"></property>
+		<property name="activeSessionsCacheName" value="sessionInvalidateUserCache"></property>
+		
+	</bean>
+	
+	 <!-- shiro的session缓存过期验证器，其实默认就是这个验证器 -->
+    <bean id="sessionValidationScheduler" class="org.apache.shiro.session.mgt.ExecutorServiceSessionValidationScheduler">
+    	<!-- 3600000毫秒=1小时，其实默认就是一小时 -->
+    	<property name="interval"  value="3600000"></property>
+    </bean>
+	
+	
+	
+<!-- =========================================================  cacheManager 用于缓存session  ==========================================-->
+	
+	<!-- ehcache -->
+	<bean id="ehcacheCacheManager"  class="org.apache.shiro.cache.ehcache.EhCacheManager"> 
+		<property name="cacheManagerConfigFile" value="classpath:cache/ehcache-shiro.xml"></property>
+	 </bean>
+
+	 
+	<!-- memcached 注意不能带资源路径前缀 -->
+	<!-- 
+	<bean id="memcachedCacheManager" class="org.jweb.common.shiro.cache.ShiroMemCachedManager" lazy-init="true">
+		<property name="cacheManagerConfigFile" value="cache/memcached.xml"></property>
+	</bean>
+	 --> 
+	
+	
+    
+<!-- ============================================  shiro session监听器相关  =============================================================== -->
+    <!-- 注册到sessionManager中的shiro session listener -->
+    <bean id="mySessionListener" class="org.jweb.common.shiro.listener.MySessionListener">
+    	<property name="sessionDAO" ref="sessionDAO"></property>
+    </bean>
+    
+    
+    
+	
+	<!-- casSubjectFactory是为了支持从cas登录系统接受rememberMe信息的 -->
+	<bean id="casSubjectFactory" class="org.apache.shiro.cas.CasSubjectFactory"></bean>
+
+
+
+
+<!-- ===================================   shiro bean生命周期相关   =================================================== -->
+	<!-- shiro定义的bean处理器，目的是通过该处理器去自动调用凡是实现了Initializable和Destroyable
+		接口bean的初始和销毁工作，如果我们不打算在spring配置中显示指定初始方法或销毁方法，同时又
+		要为我们的bean定义初始工作或销毁工作，则可以让我们的bean实现shiro的这两个接口，这样，我们
+		的bean就能够很优雅的自动被该bean处理器调用初始和销毁接口中初始方法和销毁方法
+	 -->
+	<bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor" />
+
+	
+
+
+<!--=================================== Enable Shiro Annotations for Spring-configured beans. Only run after ===================-->
+	<!-- the lifecycleBeanProcessor has run: -->
+	<bean
+		class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"
+		depends-on="lifecycleBeanPostProcessor" />
+	<bean
+		class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+		<property name="securityManager" ref="securityManager" />
+
+	</bean>
+	<!-- securityManager -->
+	<bean
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="staticMethod"
+			value="org.apache.shiro.SecurityUtils.setSecurityManager" />
+		<property name="arguments" ref="securityManager" />
+	</bean>
+	
+	
+	
+	
+<!-- ====================================    Realm 相关   =============================================== -->
+	 <!-- CAS Realm --> 
+<!-- 	 <bean id="jzwyCasRealm" class="org.jweb.tpartner.common.shiro.realm.JZWYCasRealm">  -->
+<!-- 	   <property name="cacheManager" ref="shiroCacheManager"/>  -->
+<!-- 	 </bean>  -->
+	 <bean id="monitorRealm" class="cn.keepme.ep.auth.service.impl.MonitorRealm"> 
+	 </bean>
+	
+	<!--自定义Realm 继承自AuthorizingRealm -->
+	<bean id="memberAccountNameRealm" class="org.jweb.common.shiro.realm.MemberAccountNameRealm"></bean>
+	
+	  
+	
+	
+	
+<!--======================================= CAS Filter ==================================================--> 
+	 
+	 <!-- 登录过滤器 -->
+<!-- 	 <bean id="casLoginFilter" class="org.apache.shiro.cas.CasFilter">  -->
+<!-- 	   <property name="failureUrl" value="casError.jsp"/>  -->
+<!-- 	 </bean> -->
+	 <bean id="casLoginFilter" class="org.jweb.common.shiro.filter.MyCasFilter"> 
+	   <property name="failureUrl" value="casError.jsp"/> 
+	 </bean>
+	 
+	 <!-- 登出过滤器 -->
+	 <bean id="casLogoutFilter" class="org.jweb.common.shiro.filter.SSOLogoutFilter">
+	 	<property name="cacheHandler" ref="cacheHandler"></property>
+	 </bean>
+	
+	<!-- 登出过滤器用到的处理助手类 -->
+	<bean id="cacheHandler" class="org.jweb.common.shiro.handler.SingleSignOutHandler" init-method="init">
+		<!-- 为处理类指定一个匿名的缓存管理器实现类，该管理器通过cacheName获取一个cache服务对象，用于缓存操作 -->
+<!-- 		<property name="manager" ref="memcachedCacheManager"></property> -->
+		<property name="manager" ref="ehcacheCacheManager"></property>
+		<!-- 这里cacheName应该与memcached.xml中缓存名保持一致,同时还应该与shiro的
+			sessionDao的activeSessionsCacheName保持一致，这样才能在单点登入登出处理时
+			操作到同一个缓存中的session对象
+		 -->
+<!-- 		<property name="cacheName" value="mclient0"></property> -->
+		<property name="cacheName" value="sessionInvalidateUserCache"></property>
+	</bean>
+
+
+
+
+
+
+
+
+<!-- ======================================  AOP权限验证相关  ================================================== -->
+	<!-- 使用springAOP进行权限验证 -->
+<!-- 	<bean id="permitPreAdvice" class="com.cdjzwy.common.spring.aop.advice.PermitPreAdvice"></bean> -->
+	<!-- 	设置为true,将会采用CGLib进行代理，所以就必须导入CGLib包 -->
+<!-- 	<aop:config proxy-target-class="false"> -->
+<!-- 		<aop:advisor advice-ref="permitPreAdvice"  pointcut="within(com.cdjzwy..*.rest.impl.*) and execution(* *(..))"/> -->
+<!-- 	</aop:config> -->
+	
+<!-- 	设置为true,将会采用CGLib进行代理，所以就必须导入CGLib包 -->
+	<!-- 该标签可以定义多个切面 -->
+<!-- 	<aop:config proxy-target-class="false"> -->
+	
+		<!-- 该标签可以定义多个增强 -->
+<!-- 		<aop:aspect ref="adviceMethods"> -->
+<!-- 			<aop:before pointcut="within(com.cdjzwy..*.rest.impl.*) and execution(* *(..))" method="beforeCheckPermit"/> -->
+<!-- 			<aop:around pointcut="within(com.cdjzwy..*.rest.impl.*) and execution(* *(..))" method="aroundCheckPermit"/> -->
+<!-- 		</aop:aspect> -->
+<!-- 	</aop:config> -->
+<!-- 	<bean id="adviceMethods" class="common.spring.aop.advice.PermitCheckAdviceMethods"></bean> -->
+	
+		<!-- 使用自动扫描@Aspect注解标签，还必须把带@Aspect注解标签的bean装配到spring容器中，否则无效 	 -->
+<!-- 		<aop:aspectj-autoproxy proxy-target-class="true"></aop:aspectj-autoproxy> -->
+<!-- 		<bean id="permitCheckAspect" class="common.spring.aop.advice.PermitCheckAspect"></bean> -->
+
+
+<!-- ===========================  AOP，数据加解密================================ -->
+</beans>

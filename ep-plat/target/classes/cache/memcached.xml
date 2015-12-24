@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<memcached>
+    
+    <!-- 配置第0个memcached客户端服务对象，该服务对象对应的服务器集群(服务器节点池)是pool0 -->
+    <client name="mclient0" compressEnable="true" defaultEncoding="UTF-8" socketpool="pool0">
+        <errorHandler>com.alisoft.xplatform.asf.cache.memcached.MemcachedErrorHandler</errorHandler>
+    </client>
+    
+    <!-- 配置第1个memcached客户端服务对象，该服务对象对应的服务器集群(服务器节点池)是pool1 -->
+    <client name="mclient1" compressEnable="true" defaultEncoding="UTF-8" socketpool="pool1">
+        <errorHandler>com.alisoft.xplatform.asf.cache.memcached.MemcachedErrorHandler</errorHandler>
+    </client>
+    
+    <!-- 配置第2个memcached客户端服务对象，该服务对象对应的服务器集群(服务器节点池)是pool2 -->
+    <client name="mclient2" compressEnable="true" defaultEncoding="UTF-8" socketpool="pool2">
+        <errorHandler>com.alisoft.xplatform.asf.cache.memcached.MemcachedErrorHandler</errorHandler>
+    </client>   
+
+    <!-- 配置服务器集群0，该集群下有一个服务器端节点即地址localhost:11211对应的服务器进程，有多个的话，使用逗号隔开 -->
+    <socketpool name="pool0" failover="true" initConn="5" minConn="5" maxConn="250" maintSleep="0"
+        nagle="false" socketTO="3000" aliveCheck="true">
+        <servers>localhost:11211</servers>
+    </socketpool> 
+    
+    <!-- 配置服务器集群1，该集群下有一个服务器端节点即地址localhost:11212对应的服务器进程，有多个的话，使用逗号隔开 -->
+    <socketpool name="pool1" failover="true" initConn="5" minConn="5" maxConn="250" maintSleep="0"
+        nagle="false" socketTO="3000" aliveCheck="true">
+        <servers>localhost:11212</servers>
+    </socketpool> 
+    
+    <!-- 配置服务器集群2，该集群下有一个服务器端节点即地址localhost:11213对应的服务器进程，有多个的话，使用逗号隔开 -->
+    <socketpool name="pool2" failover="true" initConn="5" minConn="5" maxConn="250" maintSleep="0"
+        nagle="false" socketTO="3000" aliveCheck="true">
+        <servers>localhost:11213</servers>
+    </socketpool>  
+
+<!-- 
+client集群的作用，mclient1对应的服务端集群数据会全部同步到mclient2对应的服务端集群上
+相当于ehcache的每个节点数据是同步的效果
+而如mclient1对应的这样的服务端集群的服务端节点上，每个节点数据是不同步的，服务端节点互不通讯
+ -->
+    <cluster name="cluster1">
+        <memCachedClients>mclient1,mclient2</memCachedClients>
+    </cluster>
+                
+</memcached>
