@@ -8,6 +8,7 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.jweb.core.bean.ReplyDataMode;
 import org.jweb.core.util.MyBeanUtils;
 import org.jweb.core.util.StringUtil;
 import org.jweb.core.web.controller.BaseController;
@@ -18,7 +19,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import cn.keepme.ep.common.bean.ReplyDataMode;
 import cn.keepme.ep.common.bean.ReplyDataModeFetchQuestion;
 import cn.keepme.ep.common.bean.ReplyDataModeLogin;
 import cn.keepme.ep.common.bean.ReplyStatus;

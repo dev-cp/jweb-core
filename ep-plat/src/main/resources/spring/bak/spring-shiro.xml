@@ -19,7 +19,8 @@
 <!-- 	<context:property-placeholder location="classpath:sysConfig.properties" /> -->
 	
 <!-- =================================   shiro启动相关  =================================== -->
-	<!-- 该bean工厂不仅是spring规范的bean工厂，而且还是bean处理器规范的bean处理器，能够在bean生命周期上进行代理工作，从而实现调用shiro过滤器的功能，完成每个http session 到shiro session包装的工作-->
+	<!-- 该bean工厂不仅是spring规范的bean工厂，而且还是bean处理器规范的bean处理器，能够在bean生命周期上进行代理工作，
+		  从而实现调用shiro过滤器的功能，完成每个http session 到shiro session包装的工作-->
 	<bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
 		<property name="securityManager" ref="securityManager" />
 		<property name="loginUrl" value="/member/login.html" />

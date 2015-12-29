@@ -1789,4 +1789,25 @@ public class StringUtil {
 	}
 	
 	
+	/**
+	 * 非空判断 add by wupan
+	 * @param value
+	 * @return
+	 */
+	public static boolean isNullValue(String value)
+   {
+     return (value == null) || (value.trim().equals(""));
+   }
+	
+	/**
+	 * 过滤非空 add by wupan
+	 * @param value
+	 * @return
+	 */
+	public static final String filterNullValue(String str)
+   {
+     return str == null ? "" : str.trim();
+   }
+	
+	
 }

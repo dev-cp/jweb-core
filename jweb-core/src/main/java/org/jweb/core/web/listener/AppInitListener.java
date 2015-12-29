@@ -4,6 +4,7 @@ import java.util.Date;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
+import javax.sql.DataSource;
 
 import org.apache.commons.beanutils.ConvertUtils;
 import org.jweb.core.converter.UtilDateConverter;
@@ -42,5 +43,24 @@ public class AppInitListener implements ServletContextListener {
 	private void initConverter(){
 		ConvertUtils.register(new UtilDateConverter(), Date.class);
 	}
+	
+	
+	
+    /**
+	 * 获取数据源
+	 * @return
+	 */
+    public static DataSource getDataSource()
+    {
+    	return (DataSource)ctx.getBean("dataSource");
+    }
+/*
+    public static DruidDataSource getDruidDataSource()
+    {
+    	Object obj = ctx.getBean("dataSource", DruidDataSource.class);
+    	DruidDataSource ds = (DruidDataSource)obj;
+    	return ds;
+    }
+*/	
 
 }
